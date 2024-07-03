@@ -1,0 +1,26 @@
+version: "3"
+services:
+  db:
+    image: postgres:13.11-bullseye
+    container_name: postgresql
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: 1234
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin4
+    restart: always
+    ports:
+      - "8888:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: tharada.auw@itmx.co.th
+      PGADMIN_DEFAULT_PASSWORD: 1234
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - pgadmin4:/var/lib/pgadmin
+volumes:
+  pgadmin4:
+  

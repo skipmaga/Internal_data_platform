@@ -1,0 +1,185 @@
+version: "3.7"
+
+x-minio-common: &minio-common
+ image: quay.io/minio/minio:RELEASE.2023-09-30T07-02-29Z
+ command: server --console-address ":9001" http://minio{1...4}/data{1...2}
+ expose:
+  - "9000"
+  - "9001"
+ environment:
+  MINIO_ROOT_USER: aiopsadm
+  MINIO_ROOT_PASSWORD: aiopsadm
+ healthcheck:
+  test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+  interval: 30s
+  timeout: 20s
+  retries: 3
+
+services:
+  spark-master:
+    image: spark-master:1.0
+    container_name: "spark-master"
+    environment:
+      - SPARK_MODE=master
+      - SPARK_LOCAL_IP=spark-master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    ports:
+      - "8081:7077"
+      - "8086:8080"
+      - "8088:10001"
+    volumes:
+      - ./spark/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf
+    networks:
+      - spark_network
+
+  spark-worker-1:
+    image: docker.io/bitnami/spark:3.3
+    container_name: "spark-worker-1"
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=192.168.1.11:8081
+      - SPARK_WORKER_MEMORY=4G
+      - SPARK_WORKER_CORES=2
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    networks:
+      - spark_network
+
+  spark-worker-2:
+    image: docker.io/bitnami/spark:3.3
+    container_name: "spark-worker-2"
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=192.168.1.11:8081
+      - SPARK_WORKER_MEMORY=4G
+      - SPARK_WORKER_CORES=2
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    networks:
+      - spark_network
+  
+  spark-worker-3:
+    image: docker.io/bitnami/spark:3.3
+    container_name: "spark-worker-3"
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=192.168.1.11:8081
+      - SPARK_WORKER_MEMORY=4G
+      - SPARK_WORKER_CORES=2
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    networks:
+      - spark_network
+
+  spark-worker-4:
+    image: docker.io/bitnami/spark:3.3
+    container_name: "spark-worker-4"
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=192.168.1.11:8081
+      - SPARK_WORKER_MEMORY=4G
+      - SPARK_WORKER_CORES=2
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    networks:
+      - spark_network
+
+  minio1:
+    <<: *minio-common
+    hostname: minio1
+    volumes:
+      - ./minio/data1-1:/data1
+      - ./minio/data1-2:/data2
+    networks:
+      - spark_network
+
+  minio2:
+    <<: *minio-common
+    hostname: minio2
+    volumes:
+      - ./minio/data2-1:/data1
+      - ./minio/data2-2:/data2
+    networks:
+      - spark_network
+
+  minio3:
+    <<: *minio-common
+    hostname: minio3
+    volumes:
+     - ./minio/data3-1:/data1
+     - ./minio/data3-2:/data2
+    networks:
+      - spark_network
+
+  minio4:
+    <<: *minio-common
+    hostname: minio4
+    volumes:
+      - ./minio/data4-1:/data1
+      - ./minio/data4-2:/data2
+    networks:
+      - spark_network
+
+  nginx:
+    image: nginx:1.19.2-alpine
+    hostname: nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "8885:8885"
+      - "8886:9001"
+    depends_on:
+      - minio1
+      - minio2
+      - minio3
+      - minio4
+    networks:
+      - spark_network
+
+  mc:
+    image: minio/mc
+    container_name: mc
+    hostname: mc
+    environment:
+      - AWS_ACCESS_KEY_ID=aiopsadm
+      - AWS_SECRET_ACCESS_KEY=aiopsadm
+      - AWS_REGION=us-east-1
+    entrypoint: >
+      /bin/sh -c " until (/usr/bin/mc config host add minio http://192.168.1.11:8885 aiopsadm aiopsadm) do echo '...waiting...' && sleep 1; done; /usr/bin/mc mb minio/warehouse; /usr/bin/mc policy set public minio/warehouse; exit 0; "    
+    depends_on:
+      - nginx
+    networks:
+      - spark_network
+
+  spark-notebook:
+    image: spark-notebook:1.0
+    container_name: "spark-notebook"
+    user: root
+    environment:
+      - JUPYTER_ENABLE_LAB="yes"
+      - GRANT_SUDO="yes"
+    volumes:
+      - ./notebooks:/home/jovyan/work
+      - ./notebooks/spark-defaults.conf:/usr/local/spark/conf/spark-defaults.conf
+    ports:
+      - "8889:8888"
+      - "9090:4040"
+    networks:
+      - spark_network
+
+networks:
+  spark_network:
+    driver: bridge
+    name: spark_network
+

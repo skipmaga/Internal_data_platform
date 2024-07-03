@@ -1,0 +1,10 @@
+version: '3'
+services:
+  upload-conf-app:
+    image: upload-conf-img:latest
+    volumes:
+      - ./data:/upload-conf/data
+      - ./conf:/upload-conf/conf
+      - ./src:/upload-conf/src
+    command: bash -c "while true; do sleep infinity; done"
+    #command: python ./src/upload-conf.py

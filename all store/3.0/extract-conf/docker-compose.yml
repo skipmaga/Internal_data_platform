@@ -1,0 +1,13 @@
+version: '3'
+services:
+  extract-app:
+    image: extract-app:2.0
+    volumes:
+      - ./data:/extract-conf/data
+      - ./conf:/extract-conf/conf
+    #  - ./src:/extract-conf/src
+    #command: bash -c "while true; do echo hello; sleep 2; done"
+networks:
+  default:
+    name: database_default
+    external: true

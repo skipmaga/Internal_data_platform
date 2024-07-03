@@ -1,0 +1,3 @@
+configparser
+ak-minio
+pyarrow

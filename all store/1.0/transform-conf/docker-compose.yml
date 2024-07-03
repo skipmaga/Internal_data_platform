@@ -1,0 +1,9 @@
+version: '3'
+services:
+  transform-app:
+    image: transform-conf-img:latest
+    volumes:
+      - ./conf:/transform-conf/conf
+    #  - ./src:/upload-conf/src
+    #command: bash -c "while true; do sleep infinity; done"
+    #command: python ./src/python_transform.py
